@@ -1,12 +1,49 @@
+# Dependencies
+node_modules/
+package-lock.json.log
+
+# Build Artifacts & Distribution
+dist/
+build/
+out/
+*.egg-info/
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Sensitive Files & Secrets
 .env
+.env.local
+.env.*.local
+*.env
+*.pem
+*.key
+*.cert
+*.crt
+secrets.json
+credentials.json
+
+# Logs & Temporary Runtime Files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.pid
+*.seed
+
+# Virtual Environments
 .venv/
 env/
 venv/
 ENV/
+
+# System & Cache Artifacts
 .DS_Store
 Thumbs.db
 .tools/
+
+# Editor Settings
+.idea/
+.vscode/*
+!.vscode/launch.json
