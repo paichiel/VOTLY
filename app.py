@@ -804,16 +804,65 @@ def security_audit():
         ]
     })
 
-# Initialize database schema and ensure sample data exists on startup (supports Gunicorn & local)
-try:
-    database.init_db()
-    database.seed_sample_data()
-except Exception as e:
-    print("Database initialization note:", e)
+# Lazy-initialized database check to eliminate import latency and prevent race conditions
+_db_initialized = False
+
+def init_app_state():
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            database.init_db()
+            database.seed_sample_data()
+            _db_initialized = True
+        except Exception as e:
+            print(f"[Votly] Database initialization note: {e}", flush=True)
+
+@app.before_request
+def ensure_db_initialized():
+    global _db_initialized
+    if not _db_initialized:
+        init_app_state()
+
+def ensure_port_available(port: int, host: str = "127.0.0.1"):
+    """Check if the target port is in use and cleanly free any orphaned process."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.2)
+        try:
+            s.bind((host, port))
+            return True
+        except OSError:
+            pass
+
+    # Port is in use - attempt to free it if an orphaned process is holding it
+    try:
+        import subprocess
+        cmd = f'netstat -ano | findstr :{port}'
+        output = subprocess.check_output(cmd, shell=True).decode()
+        for line in output.strip().splitlines():
+            if "LISTENING" in line:
+                pid = line.strip().split()[-1]
+                if pid and pid != str(os.getpid()):
+                    print(f"[Votly] Port {port} occupied by PID {pid}. Freeing port...", flush=True)
+                    subprocess.run(f"taskkill /F /PID {pid}", shell=True, capture_output=True)
+                    import time
+                    time.sleep(0.3)
+                    break
+    except Exception:
+        pass
+    return True
 
 if __name__ == "__main__":
+    init_app_state()
+
     port = int(os.environ.get("PORT", 5000))
-    host = os.environ.get("HOST", "0.0.0.0")
-    debug = os.environ.get("FLASK_DEBUG", "True").lower() in ("true", "1")
-    print(f"Votly Secure Vault Server starting on http://{host}:{port} ...")
-    app.run(host=host, port=port, debug=debug)
+    # Default to 127.0.0.1 for instant local loopback binding without firewall delays
+    host = os.environ.get("HOST", "127.0.0.1")
+    debug = os.environ.get("FLASK_DEBUG", "0").lower() in ("true", "1")
+    use_reloader = os.environ.get("FLASK_RELOADER", "0").lower() in ("true", "1")
+
+    # Fast port check
+    ensure_port_available(port, host)
+
+    print(f"[Votly] Server ready and listening on http://{host}:{port}", flush=True)
+    app.run(host=host, port=port, debug=debug, use_reloader=use_reloader, threaded=True)
