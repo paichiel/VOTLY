@@ -257,110 +257,77 @@ body {
 }
 
 /* ==========================================================================
-   Layout Containers: Desktop & Mobile Viewport Simulator
+/* Desktop Navigation Links */
+.desktop-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.desktop-nav-btn {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.desktop-nav-btn:hover {
+  background: var(--bg-surface-secondary);
+  color: var(--text-primary);
+}
+
+.desktop-nav-btn.active {
+  background: var(--cobalt-light);
+  color: var(--cobalt-primary);
+  font-weight: 600;
+}
+
+.desktop-add-doc-btn {
+  background: var(--cobalt-primary);
+  color: #FFFFFF;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: var(--cobalt-glow);
+  transition: var(--transition-smooth);
+  margin-left: 6px;
+}
+
+.desktop-add-doc-btn:hover {
+  background: var(--cobalt-hover);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Layout Containers: Fluid Responsive Container
    ========================================================================== */
 
 .app-wrapper {
-  max-width: 1240px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 24px 20px 80px 20px;
   min-height: calc(100vh - 75px);
   transition: var(--transition-smooth);
 }
 
-/* Desktop Viewport Container */
-.desktop-container {
-  display: block;
-}
-
-/* Mobile Simulator Container */
-.mobile-simulator-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 20px 0;
-}
-
-.iphone-frame {
-  width: 395px;
-  height: 820px;
-  background: var(--bg-surface);
-  border-radius: 52px;
-  box-shadow: 0 0 0 12px #1E293B, 0 0 0 14px #0F172A, 0 35px 70px -15px rgba(15, 23, 42, 0.35);
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-/* Dynamic Island / Notch */
-.dynamic-island {
-  position: absolute;
-  top: 11px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 115px;
-  height: 28px;
-  background: #000000;
-  border-radius: 20px;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
-}
-
-.island-camera {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: #0F172A;
-  border: 1.5px solid #1E293B;
-}
-
-.island-sensor {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #050B14;
-}
-
-/* Mobile Status Bar */
-.mobile-status-bar {
-  height: 48px;
-  padding: 12px 28px 0 28px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text-primary);
-  z-index: 55;
-}
-
-.mobile-status-icons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.mobile-screen-scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 12px 18px 85px 18px;
-  position: relative;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Mobile Bottom Navigation Bar */
+/* Mobile Bottom Navigation Bar (Fixed for phone & tablet views) */
 .mobile-bottom-nav {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 76px;
+  height: 68px;
   background: var(--bg-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -368,8 +335,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 6px 12px 16px 12px;
-  z-index: 50;
+  padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px)) 12px;
+  z-index: 1000;
 }
 
 .nav-item {
@@ -2249,3 +2216,399 @@ body {
   border-color: var(--cobalt-primary);
   transform: translateY(-1px);
 }
+
+/* ==========================================================================
+   Responsive Multi-Device System: True Native Mobile App & Desktop Web App
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. MOBILE APP VIEW (< 768px) — Authentic iOS / WhatsApp / Apple Wallet Feel
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* Hide the desktop website topbar entirely on phone */
+  .votly-topbar {
+    display: none !important;
+  }
+
+  html, body {
+    height: auto;
+    min-height: 100dvh;
+    background: var(--bg-body, #F8FAFC);
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .app-wrapper {
+    padding: 0 0 calc(76px + env(safe-area-inset-bottom, 16px)) 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    min-height: 100dvh;
+    box-sizing: border-box;
+  }
+
+  /* Screen 1: Welcome / Splash Onboarding Screen */
+  .welcome-screen-wrap {
+    min-height: 100dvh !important;
+    height: 100dvh;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding: calc(env(safe-area-inset-top, 24px) + 20px) 24px calc(env(safe-area-inset-bottom, 20px) + 28px) 24px !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    box-sizing: border-box;
+  }
+
+  .welcome-header {
+    margin-top: 4px !important;
+  }
+
+  .welcome-brand-title {
+    font-size: 38px !important;
+    font-weight: 800 !important;
+    letter-spacing: -1px;
+  }
+
+  .welcome-tagline {
+    font-size: 19px !important;
+    line-height: 1.35 !important;
+    margin-top: 8px !important;
+    color: var(--text-secondary);
+  }
+
+  .welcome-graphic-container {
+    margin: 20px auto !important;
+  }
+
+  .welcome-3d-card-stack {
+    transform: scale(1.05);
+  }
+
+  .welcome-bottom-actions {
+    width: 100% !important;
+    max-width: 400px !important;
+    margin: 0 auto !important;
+  }
+
+  .btn-primary-cobalt {
+    min-height: 52px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.45);
+  }
+
+  .btn-primary-cobalt:active {
+    transform: scale(0.97);
+  }
+
+  .btn-secondary-pearl {
+    min-height: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 18px;
+  }
+
+  .btn-secondary-pearl:active {
+    transform: scale(0.97);
+  }
+
+  /* Screen 2: Native App Dashboard (Home) */
+  .home-view-container {
+    padding: calc(env(safe-area-inset-top, 14px) + 14px) 18px 24px 18px !important;
+    max-width: 100% !important;
+  }
+
+  .home-header {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .greeting-text {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .user-display-name {
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.6px;
+    color: var(--text-primary);
+  }
+
+  .vault-secure-banner {
+    padding: 16px 18px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 26px -4px rgba(37, 99, 235, 0.35);
+  }
+
+  /* Quick Access Shortcuts (4 items in row, touch-friendly) */
+  .quick-access-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 22px !important;
+  }
+
+  .quick-action-card {
+    border-radius: 18px;
+    padding: 14px 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    touch-action: manipulation;
+  }
+
+  .quick-action-card:active {
+    transform: scale(0.94);
+  }
+
+  .action-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+  }
+
+  .action-label {
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  /* Document Categories Grid (2x2) */
+  .categories-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-bottom: 22px !important;
+  }
+
+  .category-card {
+    border-radius: 18px;
+    padding: 14px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    touch-action: manipulation;
+  }
+
+  .category-card:active {
+    transform: scale(0.96);
+  }
+
+  /* Screen 3, 4, 6, 8: Native Mobile Padding */
+  .documents-view-container,
+  .detail-view-container,
+  .search-view-container,
+  .settings-view-container {
+    padding: calc(env(safe-area-inset-top, 14px) + 14px) 18px 24px 18px !important;
+    max-width: 100% !important;
+  }
+
+  /* Document Items List Touch Polish */
+  .document-item-row {
+    border-radius: 18px;
+    padding: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    touch-action: manipulation;
+  }
+
+  .document-item-row:active {
+    transform: scale(0.98);
+    background: var(--cobalt-light);
+  }
+
+  .doc-thumb-container {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  /* Native Mobile Bottom Navigation Bar (WhatsApp / Apple Wallet standard) */
+  .mobile-bottom-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(64px + env(safe-area-inset-bottom, 12px));
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-top: 1px solid rgba(226, 232, 240, 0.85);
+    align-items: center;
+    justify-content: space-around;
+    padding: 4px 12px env(safe-area-inset-bottom, 12px) 12px;
+    z-index: 1000;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.05);
+  }
+
+  [data-theme="dark"] .mobile-bottom-nav {
+    background: rgba(10, 15, 29, 0.94);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 60px;
+    touch-action: manipulation;
+    transition: transform 0.15s ease, color 0.15s ease;
+  }
+
+  .nav-item:active {
+    transform: scale(0.9);
+  }
+
+  .nav-item.active {
+    color: var(--cobalt-primary);
+    font-weight: 700;
+  }
+
+  .nav-item svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .nav-fab-center {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--cobalt-primary);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 22px -2px rgba(37, 99, 235, 0.5);
+    border: none;
+    cursor: pointer;
+    margin-top: -20px;
+    touch-action: manipulation;
+    transition: transform 0.15s ease;
+  }
+
+  .nav-fab-center:active {
+    transform: scale(0.92);
+  }
+
+  /* Native Mobile Bottom Sheet Modals */
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-card {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 28px 28px 0 0;
+    max-height: 92vh;
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 16px)) 20px;
+    animation: slideUpSheet 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUpSheet {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   AUTH & GET STARTED (WELCOME) SCREEN CHROME VISIBILITY
+   Top navigation bar and bottom navigation are completely hidden
+   until the user has created an account or signed in.
+   -------------------------------------------------------------------------- */
+body.hide-chrome .votly-topbar,
+body.hide-chrome #mainTopbar,
+body.hide-chrome .mobile-bottom-nav,
+body.hide-chrome #mobileBottomNav,
+body.hide-chrome .desktop-nav-links,
+body.hide-chrome #desktopNavLinks,
+body.hide-chrome .topbar-actions {
+  display: none !important;
+}
+
+body.hide-chrome .app-wrapper {
+  padding-top: 0 !important;
+  min-height: 100vh !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --------------------------------------------------------------------------
+   2. DESKTOP WEB APP VIEW (>= 769px) — Spacious, High-Productivity Dashboard
+   -------------------------------------------------------------------------- */
+@media (min-width: 769px) {
+  /* Show the full desktop website topbar only when authenticated */
+  body:not(.hide-chrome) .votly-topbar {
+    display: block;
+  }
+
+  /* Hide the mobile bottom tab bar */
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  /* Show desktop navigation links in topbar only when authenticated */
+  body:not(.hide-chrome) .desktop-nav-links {
+    display: flex;
+  }
+
+  /* Hide mobile-only inline header icons */
+  .mobile-only-action {
+    display: none !important;
+  }
+
+  .app-wrapper {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 28px 24px 60px 24px;
+    min-height: calc(100vh - 75px);
+  }
+
+  .home-view-container, .documents-view-container,
+  .detail-view-container, .search-view-container,
+  .settings-view-container {
+    max-width: 1040px;
+    margin: 0 auto;
+  }
+
+  .document-items-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .categories-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .quick-access-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .welcome-screen-wrap {
+    max-width: 480px;
+    margin: 40px auto;
+  }
+}
+
+

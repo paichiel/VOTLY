@@ -89,6 +89,24 @@ def init_db():
     )
     """)
 
+    # Notifications & Expiration Reminders table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        document_id INTEGER NOT NULL,
+        milestone TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        channel TEXT DEFAULT 'all',
+        sent_at TEXT NOT NULL,
+        is_read INTEGER DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE CASCADE,
+        UNIQUE(document_id, milestone)
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -307,3 +325,215 @@ def seed_sample_data():
     conn.commit()
     conn.close()
     return user_id
+
+# ============================================================================
+# NOTIFICATIONS & DOCUMENT EXPIRATION ENGINE
+# ============================================================================
+
+def create_notification(user_id, document_id, milestone, title, message, channel="all"):
+    """Inserts a notification record if not already triggered for this milestone."""
+    conn = get_db()
+    cursor = conn.cursor()
+    now = datetime.now().isoformat()
+    try:
+        cursor.execute("""
+        INSERT INTO notifications (user_id, document_id, milestone, title, message, channel, sent_at, is_read)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+        """, (user_id, document_id, milestone, title, message, channel, now))
+        conn.commit()
+        notif_id = cursor.lastrowid
+        conn.close()
+        return notif_id
+    except sqlite3.IntegrityError:
+        # Already sent this milestone for this document
+        conn.close()
+        return None
+
+def get_user_notifications(user_id, unread_only=False, limit=50):
+    """Retrieves notifications for a user, sorted newest first."""
+    conn = get_db()
+    cursor = conn.cursor()
+    query = """
+    SELECT n.*, d.title as doc_title, d.category, d.document_number, d.expires_date
+    FROM notifications n
+    LEFT JOIN documents d ON n.document_id = d.id
+    WHERE n.user_id = ?
+    """
+    params = [user_id]
+    if unread_only:
+        query += " AND n.is_read = 0"
+    query += " ORDER BY n.sent_at DESC LIMIT ?"
+    params.append(limit)
+
+    cursor.execute(query, tuple(params))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def get_unread_notifications_count(user_id):
+    """Returns the number of unread notifications for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0", (user_id,))
+    row = cursor.fetchone()
+    count = row["count"] if row else 0
+    conn.close()
+    return count
+
+def mark_notification_as_read(notification_id, user_id):
+    """Marks a single notification as read."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?", (notification_id, user_id))
+    conn.commit()
+    conn.close()
+    return True
+
+def mark_all_notifications_read(user_id):
+    """Marks all notifications for a user as read."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+def check_and_generate_expiration_notifications(target_date=None):
+    """
+    Scans all documents for upcoming expiration dates at the 4 critical intervals:
+      - 30 Days (1 Month Notice)
+      - 14 Days (2 Weeks Notice)
+      - 7 Days  (1 Week Notice)
+      - 1 Day   (24-Hour Final Notice)
+      - Expired (Immediate alert)
+    Dispatches automated emails and creates in-app notification records.
+    """
+    from email_service import EmailService
+
+    conn = get_db()
+    cursor = conn.cursor()
+    ref_date = target_date if target_date else datetime.now().date()
+
+    # Query all active documents with an expiration date, joining user info
+    cursor.execute("""
+    SELECT d.id, d.user_id, d.title, d.category, d.document_type, d.document_number,
+           d.country, d.expires_date, u.email, u.full_name
+    FROM documents d
+    JOIN users u ON d.user_id = u.id
+    WHERE d.expires_date IS NOT NULL AND d.expires_date != ''
+    """)
+    documents = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    processed = []
+
+    for doc in documents:
+        try:
+            exp_date = datetime.strptime(doc["expires_date"], "%Y-%m-%d").date()
+        except Exception:
+            continue
+
+        delta_days = (exp_date - ref_date).days
+
+        milestone = None
+        milestone_label = None
+        urgency = "info"
+
+        if 25 <= delta_days <= 30:
+            milestone = "30_DAYS"
+            milestone_label = "1-Month Advance Notice"
+            urgency = "notice"
+        elif 11 <= delta_days <= 14:
+            milestone = "14_DAYS"
+            milestone_label = "2-Week Expiration Notice"
+            urgency = "warning"
+        elif 5 <= delta_days <= 7:
+            milestone = "7_DAYS"
+            milestone_label = "1-Week Urgent Warning"
+            urgency = "urgent"
+        elif 0 <= delta_days <= 1:
+            milestone = "1_DAY"
+            milestone_label = "Final 24-Hour Notice"
+            urgency = "critical"
+        elif delta_days < 0:
+            milestone = "EXPIRED"
+            milestone_label = "Document Expired"
+            urgency = "expired"
+
+        if milestone:
+            # Check if this notification was already generated
+            title = f"{milestone_label}: '{doc['title']}'"
+            if delta_days >= 0:
+                message = f"Your document '{doc['title']}' ({doc['document_type']}) expires in {delta_days} day{'s' if delta_days != 1 else ''} on {doc['expires_date']}."
+            else:
+                message = f"Your document '{doc['title']}' expired {abs(delta_days)} day{'s' if abs(delta_days) != 1 else ''} ago on {doc['expires_date']}."
+
+            notif_id = create_notification(
+                user_id=doc["user_id"],
+                document_id=doc["id"],
+                milestone=milestone,
+                title=title,
+                message=message,
+                channel="email+inapp"
+            )
+
+            if notif_id:
+                # Dispatch the automated email
+                email_result = EmailService.send_notification(
+                    to_email=doc["email"],
+                    user_name=doc["full_name"],
+                    doc_title=doc["title"],
+                    doc_number=doc["document_number"],
+                    category=doc["category"],
+                    expires_date=doc["expires_date"],
+                    days_remaining=delta_days,
+                    milestone_label=milestone_label
+                )
+
+                # Log activity
+                conn_log = get_db()
+                cur_log = conn_log.cursor()
+                cur_log.execute("""
+                INSERT INTO activity_logs (user_id, document_id, action, details, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+                """, (
+                    doc["user_id"],
+                    doc["id"],
+                    "ALERT_SENT",
+                    f"Automated {milestone_label} dispatched to {doc['email']}.",
+                    datetime.now().isoformat()
+                ))
+                conn_log.commit()
+                conn_log.close()
+
+                processed.append({
+                    "document_id": doc["id"],
+                    "title": doc["title"],
+                    "user_email": doc["email"],
+                    "milestone": milestone,
+                    "days_remaining": delta_days,
+                    "email_dispatched": email_result.get("success", False)
+                })
+
+    return processed
+
+def update_user_profile(user_id, updates):
+    """Updates user profile fields and credentials in SQLite."""
+    conn = get_db()
+    cursor = conn.cursor()
+    allowed = ["full_name", "email", "avatar_url", "auto_lock_minutes", "password_hash", "pin_hash"]
+    fields = []
+    values = []
+    for k in allowed:
+        if k in updates and updates[k] is not None:
+            fields.append(f"{k} = ?")
+            values.append(updates[k])
+    if fields:
+        values.append(user_id)
+        cursor.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = ?", tuple(values))
+        conn.commit()
+    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
