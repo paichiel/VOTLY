@@ -8,12 +8,18 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 MASTER_KEY_FILE = "vault_master.key"
 
 def get_or_create_master_key():
+    env_key = os.environ.get("VAULT_MASTER_KEY", "").strip()
+    if env_key:
+        return env_key.encode("utf-8")
     if os.path.exists(MASTER_KEY_FILE):
         with open(MASTER_KEY_FILE, "rb") as f:
             return f.read().strip()
     key = Fernet.generate_key()
-    with open(MASTER_KEY_FILE, "wb") as f:
-        f.write(key)
+    try:
+        with open(MASTER_KEY_FILE, "wb") as f:
+            f.write(key)
+    except Exception:
+        pass
     return key
 
 MASTER_KEY = get_or_create_master_key()
